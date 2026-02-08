@@ -9,10 +9,13 @@ import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from dotenv import load_dotenv
-
-# Load environment variables from .env file (for local development)
-load_dotenv()
+# Load environment variables from .env file (for local development only)
+# On Streamlit Cloud, st.secrets is used instead
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not needed on Streamlit Cloud
 
 
 def get_secret(key: str, default: str = "") -> str:
