@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report {{ team_name }} - Serie A 2015-2016</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- ============================================================
+         PAGE 1: Team Header + Radar + Formation
+         ============================================================ -->
+    <div class="page" id="page-1">
+        <!-- Team Header -->
+        <div class="team-header-section">
+            <h1 class="team-name">{{ team_name }}</h1>
+            {% if logo_base64 %}
+            <img src="{{ logo_base64 }}" alt="{{ team_name }}" class="team-logo">
+            {% endif %}
+            <div class="manager-info">
+                <span class="manager-name">{{ manager_name }}</span>
+                <span class="matches-count">({{ matches_count }} partite)</span>
+            </div>
+            {% if cluster_name %}
+            <div class="cluster-badge">
+                <span class="cluster-label">Stile di Gioco</span>
+                <span class="cluster-name">{{ cluster_name }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Radar Chart -->
+        <div class="section-title">Profilo Tattico Squadra</div>
+        <div class="radar-container">
+            {% if radar_chart_base64 %}
+            <img src="{{ radar_chart_base64 }}" alt="Profilo Tattico" class="radar-image">
+            {% else %}
+            <p>Radar chart non disponibile</p>
+            {% endif %}
+        </div>
+
+        <!-- Formation -->
+        <div class="section-title">Formazione</div>
+        <div class="formation-container">
+            <div class="formation-badge">{{ formation }}</div>
+            {% if pitch_base64 %}
+            <img src="{{ pitch_base64 }}" alt="Formazione {{ formation }}" class="pitch-image">
+            {% else %}
+            <p>Visualizzazione formazione non disponibile</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PAGE 2: Tactical Analysis + Player Profiles
+         ============================================================ -->
+    <div class="page" id="page-2">
+        <!-- Team Analysis -->
+        <div class="section-title">Analisi Tattica Squadra</div>
+        <div class="analysis-text">
+            {{ team_analysis | default('Analisi tattica non disponibile.', true) }}
+        </div>
+
+        <!-- Player Profiles -->
+        <div class="section-title">Analisi Singoli Giocatori</div>
+        {% if player_profiles and player_profiles|length > 0 %}
+        <div class="player-profiles-grid">
+            {% for player in player_profiles %}
+            <div class="player-card">
+                <div class="player-card-header">
+                    <span class="player-name">{{ player.surname }}</span>
+                    <span>
+                        <span class="player-position">{{ player.position_it }}</span>
+                        {% if player.archetype %}
+                        <span class="player-archetype">{{ player.archetype }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <p class="player-description">{{ player.description | default('', true) }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>Profili giocatori non disponibili. Genera l'analisi dalla dashboard.</p>
+        {% endif %}
+    </div>
+
+    <!-- ============================================================
+         PAGE 3: Metrics Summary
+         ============================================================ -->
+    <div class="page" id="page-3">
+        <div class="section-title">Metriche Chiave</div>
+
+        <div class="two-columns">
+            <!-- Positive Metrics -->
+            <div class="metrics-section">
+                <div class="metrics-header strength">
+                    <span>Punti di Forza</span>
+                </div>
+                {% for metric in positive_metrics %}
+                <div class="metric-card strength">
+                    <span class="metric-name">{{ metric.name }}</span>
+                    <div class="metric-values">
+                        <div class="percentile-bar-container">
+                            <div class="percentile-bar" style="width: {{ metric.percentile }}%"></div>
+                        </div>
+                        <span class="metric-value">{{ "%.2f"|format(metric.value) }}</span>
+                        <span class="metric-rank">#{{ metric.rank }}/{{ total_combinations }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Negative Metrics -->
+            <div class="metrics-section">
+                <div class="metrics-header weakness">
+                    <span>Punti Deboli</span>
+                </div>
+                {% for metric in negative_metrics %}
+                <div class="metric-card weakness">
+                    <span class="metric-name">{{ metric.name }}</span>
+                    <div class="metric-values">
+                        <div class="percentile-bar-container">
+                            <div class="percentile-bar" style="width: {{ 100 - metric.percentile }}%"></div>
+                        </div>
+                        <span class="metric-value">{{ "%.2f"|format(metric.value) }}</span>
+                        <span class="metric-rank">#{{ metric.rank }}/{{ total_combinations }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PAGE 4: Positive Contributions Detail
+         ============================================================ -->
+    <div class="page" id="page-4">
+        <div class="section-title">Dettaglio Contributi - Metriche Positive</div>
+
+        {% if positive_contributions and positive_contributions|length > 0 %}
+        {% for contribution in positive_contributions %}
+        <div class="contributions-section half-page">
+            <div class="contribution-metric-title strength">
+                {{ contribution.metric_name }}
+            </div>
+            <ol class="contribution-list">
+                {% for player in contribution.players %}
+                <li class="contribution-item strength">
+                    <span class="contribution-rank">{{ player.rank }}</span>
+                    <span class="contribution-player">{{ player.surname }}</span>
+                    <span class="contribution-value">{{ "%.1f"|format(player.contribution) }}%</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p>Nessun dettaglio contributi selezionato per le metriche positive.</p>
+        {% endif %}
+    </div>
+
+    <!-- ============================================================
+         PAGE 5: Negative Contributions Detail
+         ============================================================ -->
+    <div class="page" id="page-5">
+        <div class="section-title">Dettaglio Contributi - Metriche Negative</div>
+
+        {% if negative_contributions and negative_contributions|length > 0 %}
+        {% for contribution in negative_contributions %}
+        <div class="contributions-section half-page">
+            <div class="contribution-metric-title weakness">
+                {{ contribution.metric_name }}
+            </div>
+            <ol class="contribution-list">
+                {% for player in contribution.players %}
+                <li class="contribution-item weakness">
+                    <span class="contribution-rank">{{ player.rank }}</span>
+                    <span class="contribution-player">{{ player.surname }}</span>
+                    <span class="contribution-value">{{ "%.1f"|format(player.contribution) }}%</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p>Nessun dettaglio contributi selezionato per le metriche negative.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

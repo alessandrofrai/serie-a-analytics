@@ -1,0 +1,538 @@
+/* ============================================================
+   Serie A Analytics - PDF Report Styles
+   Design System matching the Streamlit dashboard
+   ============================================================ */
+
+/* === DESIGN TOKENS === */
+:root {
+    /* Brand Colors */
+    --brand-primary: #0c1929;
+    --brand-secondary: #1a2d4a;
+    --brand-tertiary: #243b5c;
+
+    /* Strength (Green) */
+    --strength-bg: #ecfdf5;
+    --strength-bg-hover: #d1fae5;
+    --strength-main: #10b981;
+    --strength-dark: #059669;
+    --strength-text: #065f46;
+    --strength-badge: #a7f3d0;
+
+    /* Weakness (Red) */
+    --weakness-bg: #fef2f2;
+    --weakness-bg-hover: #fee2e2;
+    --weakness-main: #ef4444;
+    --weakness-dark: #dc2626;
+    --weakness-text: #991b1b;
+    --weakness-badge: #fecaca;
+
+    /* Average (Amber) */
+    --average-bg: #fffbeb;
+    --average-bg-hover: #fef3c7;
+    --average-main: #f59e0b;
+    --average-dark: #d97706;
+    --average-text: #92400e;
+    --average-badge: #fde68a;
+
+    /* Neutrals */
+    --neutral-50: #fafafa;
+    --neutral-100: #f5f5f5;
+    --neutral-200: #e5e5e5;
+    --neutral-300: #d4d4d4;
+    --neutral-400: #a3a3a3;
+    --neutral-500: #737373;
+    --neutral-600: #525252;
+    --neutral-700: #404040;
+    --neutral-800: #262626;
+    --neutral-900: #171717;
+
+    /* Typography */
+    --font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-weight-title: 700;
+    --font-weight-subtitle: 600;
+    --font-weight-body: 500;
+    --font-weight-normal: 400;
+
+    /* Spacing */
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+}
+
+/* === PAGE SETUP === */
+@page {
+    size: A4;
+    margin: 1.2cm 1.5cm;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: 10pt;
+    line-height: 1.4;
+    color: var(--neutral-800);
+    background: white;
+}
+
+.page {
+    page-break-after: always;
+    min-height: 100%;
+    padding: 0;
+}
+
+.page:last-child {
+    page-break-after: auto;
+}
+
+/* === PAGE 1: TEAM HEADER === */
+.team-header-section {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--neutral-200);
+}
+
+.team-name {
+    font-size: 28pt;
+    font-weight: var(--font-weight-title);
+    color: var(--brand-primary);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.team-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    margin: 0.8rem auto;
+    display: block;
+}
+
+.manager-info {
+    font-size: 14pt;
+    color: var(--neutral-600);
+    margin-bottom: 0.5rem;
+}
+
+.manager-name {
+    font-weight: var(--font-weight-subtitle);
+    color: var(--neutral-800);
+}
+
+.matches-count {
+    color: var(--neutral-500);
+    font-size: 12pt;
+}
+
+/* === CLUSTER BADGE === */
+.cluster-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+    color: white;
+    padding: 0.6rem 1.5rem;
+    border-radius: var(--radius-lg);
+    margin: 1rem auto;
+}
+
+.cluster-label {
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.8;
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+.cluster-name {
+    font-size: 14pt;
+    font-weight: var(--font-weight-title);
+}
+
+/* === SECTION TITLES === */
+.section-title {
+    font-size: 14pt;
+    font-weight: var(--font-weight-title);
+    color: var(--brand-primary);
+    margin: 1.5rem 0 0.8rem 0;
+    padding-bottom: 0.3rem;
+    border-bottom: 2px solid var(--brand-primary);
+}
+
+.section-subtitle {
+    font-size: 11pt;
+    font-weight: var(--font-weight-subtitle);
+    color: var(--neutral-700);
+    margin: 1rem 0 0.5rem 0;
+}
+
+/* === RADAR CHART === */
+.radar-container {
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.radar-image {
+    max-width: 350px;
+    height: auto;
+    margin: 0 auto;
+    display: block;
+}
+
+/* === FORMATION === */
+.formation-container {
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.formation-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 16pt;
+    font-weight: var(--font-weight-title);
+    margin-bottom: 0.8rem;
+}
+
+.pitch-image {
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+    display: block;
+}
+
+/* === PAGE 2: ANALYSIS === */
+.analysis-text {
+    font-size: 10pt;
+    line-height: 1.6;
+    color: var(--neutral-700);
+    text-align: justify;
+    padding: 1rem;
+    background: var(--neutral-50);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--brand-primary);
+}
+
+/* === PLAYER PROFILES === */
+.player-profiles-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+}
+
+.player-card {
+    background: white;
+    border: 1px solid var(--neutral-200);
+    border-radius: var(--radius-md);
+    padding: 0.7rem;
+    page-break-inside: avoid;
+}
+
+.player-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.player-name {
+    font-size: 10pt;
+    font-weight: var(--font-weight-subtitle);
+    color: var(--neutral-800);
+}
+
+.player-position {
+    font-size: 8pt;
+    color: var(--neutral-500);
+    background: var(--neutral-100);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.player-archetype {
+    font-size: 8pt;
+    font-weight: var(--font-weight-subtitle);
+    color: var(--brand-secondary);
+    margin-left: 4px;
+}
+
+.player-description {
+    font-size: 9pt;
+    color: var(--neutral-600);
+    line-height: 1.4;
+}
+
+/* === PAGE 3: METRICS === */
+.metrics-section {
+    margin: 1rem 0;
+}
+
+.metrics-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 0.8rem;
+    color: white;
+    font-weight: var(--font-weight-subtitle);
+}
+
+.metrics-header.strength {
+    background: linear-gradient(135deg, var(--strength-dark) 0%, var(--strength-main) 100%);
+}
+
+.metrics-header.weakness {
+    background: linear-gradient(135deg, var(--weakness-dark) 0%, var(--weakness-main) 100%);
+}
+
+.metric-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.8rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.4rem;
+    page-break-inside: avoid;
+}
+
+.metric-card.strength {
+    background: linear-gradient(135deg, var(--strength-bg) 0%, var(--strength-bg-hover) 100%);
+    border-left: 4px solid var(--strength-main);
+}
+
+.metric-card.weakness {
+    background: linear-gradient(135deg, var(--weakness-bg) 0%, var(--weakness-bg-hover) 100%);
+    border-left: 4px solid var(--weakness-main);
+}
+
+.metric-name {
+    font-size: 10pt;
+    font-weight: var(--font-weight-body);
+}
+
+.metric-card.strength .metric-name {
+    color: var(--strength-text);
+}
+
+.metric-card.weakness .metric-name {
+    color: var(--weakness-text);
+}
+
+.metric-values {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.metric-value {
+    font-size: 11pt;
+    font-weight: var(--font-weight-title);
+}
+
+.metric-card.strength .metric-value {
+    color: var(--strength-dark);
+}
+
+.metric-card.weakness .metric-value {
+    color: var(--weakness-dark);
+}
+
+.metric-rank {
+    font-size: 9pt;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: var(--font-weight-subtitle);
+}
+
+.metric-card.strength .metric-rank {
+    background: var(--strength-badge);
+    color: var(--strength-text);
+}
+
+.metric-card.weakness .metric-rank {
+    background: var(--weakness-badge);
+    color: var(--weakness-text);
+}
+
+/* Percentile Bar */
+.percentile-bar-container {
+    width: 60px;
+    height: 6px;
+    background: var(--neutral-200);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.percentile-bar {
+    height: 100%;
+    border-radius: 3px;
+}
+
+.metric-card.strength .percentile-bar {
+    background: var(--strength-main);
+}
+
+.metric-card.weakness .percentile-bar {
+    background: var(--weakness-main);
+}
+
+/* === PAGES 4-5: CONTRIBUTIONS === */
+.contributions-section {
+    margin-bottom: 2rem;
+}
+
+.contribution-metric-title {
+    font-size: 12pt;
+    font-weight: var(--font-weight-title);
+    padding: 0.5rem 0.8rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.6rem;
+}
+
+.contribution-metric-title.strength {
+    background: var(--strength-bg);
+    color: var(--strength-text);
+    border-left: 4px solid var(--strength-main);
+}
+
+.contribution-metric-title.weakness {
+    background: var(--weakness-bg);
+    color: var(--weakness-text);
+    border-left: 4px solid var(--weakness-main);
+}
+
+.contribution-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.contribution-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.25rem;
+    page-break-inside: avoid;
+}
+
+.contribution-item:nth-child(odd) {
+    background: var(--neutral-50);
+}
+
+.contribution-item:nth-child(even) {
+    background: white;
+}
+
+.contribution-rank {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 9pt;
+    font-weight: var(--font-weight-title);
+    color: white;
+    margin-right: 0.6rem;
+}
+
+.contribution-item.strength .contribution-rank {
+    background: var(--strength-main);
+}
+
+.contribution-item.weakness .contribution-rank {
+    background: var(--weakness-main);
+}
+
+.contribution-player {
+    flex: 1;
+    font-size: 10pt;
+    font-weight: var(--font-weight-body);
+    color: var(--neutral-800);
+}
+
+.contribution-value {
+    font-size: 11pt;
+    font-weight: var(--font-weight-title);
+}
+
+.contribution-item.strength .contribution-value {
+    color: var(--strength-dark);
+}
+
+.contribution-item.weakness .contribution-value {
+    color: var(--weakness-dark);
+}
+
+/* === TWO-COLUMN LAYOUT === */
+.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.half-page {
+    margin-bottom: 2rem;
+}
+
+/* === FOOTER === */
+.page-footer {
+    position: fixed;
+    bottom: 0.5cm;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 8pt;
+    color: var(--neutral-400);
+}
+
+.page-number {
+    font-weight: var(--font-weight-subtitle);
+}
+
+/* === UTILITIES === */
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mb-1 {
+    margin-bottom: 0.5rem;
+}
+
+.mb-2 {
+    margin-bottom: 1rem;
+}
+
+.mb-3 {
+    margin-bottom: 1.5rem;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-between {
+    justify-content: space-between;
+}
+
+.flex-center {
+    align-items: center;
+}
+
+.gap-1 {
+    gap: 0.5rem;
+}
