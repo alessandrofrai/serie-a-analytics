@@ -16,29 +16,6 @@ def apply_custom_css():
 CSS_STYLES = """
 <style>
     /* ============================================
-       FORCE LIGHT THEME
-       Override system dark mode preferences
-       ============================================ */
-    :root {
-        color-scheme: light only !important;
-    }
-
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        background-color: #ffffff !important;
-        color: #262730 !important;
-    }
-
-    @media (prefers-color-scheme: dark) {
-        :root {
-            color-scheme: light only !important;
-        }
-        html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-            background-color: #ffffff !important;
-            color: #262730 !important;
-        }
-    }
-
-    /* ============================================
        SCROLL ANCHORING FIX
        Prevents browser from auto-scrolling on rerun
        ============================================ */
