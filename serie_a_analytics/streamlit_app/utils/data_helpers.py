@@ -1219,7 +1219,28 @@ def get_sofascore_to_statsbomb_team_id_map() -> dict:
 
 @st.cache_data(ttl=3600, show_spinner="Caricamento dati...")
 def load_sofascore_events() -> pd.DataFrame:
-    """Load SofaScore events (matches) with event_id and start_time_utc."""
+    """
+    Load SofaScore events (matches) with event_id and start_time_utc.
+
+    On Streamlit Cloud (DATA_SOURCE='supabase'), fetches from sofascore_events table.
+    For local development, falls back to CSV file.
+    """
+    # Try Supabase first if configured
+    if DATA_SOURCE == "supabase":
+        try:
+            client = _get_supabase_client()
+            all_data = _fetch_all_rows(client, 'sofascore_events')
+            if all_data:
+                df = pd.DataFrame(all_data)
+                if 'start_time_utc' in df.columns:
+                    df['match_date'] = pd.to_datetime(df['start_time_utc'], errors='coerce').dt.date
+                return df
+        except Exception as e:
+            # Log error but continue to CSV fallback for local dev
+            import logging
+            logging.warning(f"Failed to load sofascore_events from Supabase: {e}")
+
+    # Fallback to CSV (local development)
     data_dir = get_data_dir().parent
     events_path = data_dir / 'raw' / 'sofascore' / 'events.csv'
     if not events_path.exists():
