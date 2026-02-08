@@ -99,18 +99,25 @@ def _fetch_all_rows(client, table_name, select_columns='*', page_size=1000):
 
 # Fun loading messages for the loading animation
 LOADING_MESSAGES = [
-    "Spolverando le linee del campo...",
-    "Lucidando i pali della porta...",
-    "Districando i nodi della rete...",
-    "Annaffiando le panchine...",
-    "Contando i fili d'erba...",
-    "Gonfiando i palloni...",
-    "Stirando le maglie...",
-    "Riordinando gli spogliatoi...",
-    "Controllando il VAR...",
-    "Fischiando l'inizio...",
-    "Preparando il tabellone...",
-    "Allineando i birilli...",
+    "🧹 ...Spolverando le linee del campo... 🧹",
+    "✨ ...Lucidando i pali della porta... ✨",
+    "🪢 ...Districando i nodi della rete... 🪢",
+    "🪑 ...Annaffiando le panchine... 🪑",
+    "🌱 ...Contando i fili d'erba uno per uno... 🌱",
+    "🎈 ...Gonfiando i palloni a fiato... 🎈",
+    "📐 ...Misurando il fuorigioco col metro da sarta... 📐",
+    "🧤 ...Insaponando i guanti del portiere... 🧤",
+    "🎺 ...Accordando la trombetta del tifoso... 🎺",
+    "🪣 ...Svuotando le pozzanghere con un cucchiaino... 🪣",
+    "🔧 ...Avvitando il dischetto del centrocampo... 🔧",
+    "🪮 ...Pettinando l'erba del centrocampo... 🪮",
+    "🧣 ...Mettendo la sciarpa ai pali della porta... 🧣",
+    "🍼 ...Dando il biberon al pallone... 🍼",
+    "🧴 ...Mettendo la crema solare alla traversa... 🧴",
+    "🎀 ...Mettendo un fiocchetto alle bandierine del corner... 🎀",
+    "☂️ ...Riparando il dischetto dalla pioggia... ☂️",
+    "🛏️ ...Rifacendo il letto all'area di rigore... 🛏️",
+    "🎁 ...Incartando il fischietto dell'arbitro... 🎁",
 ]
 
 
@@ -143,8 +150,8 @@ def load_data_from_supabase():
                 shown_messages.append(messages[len(shown_messages) % len(messages)])
                 # Render ALL messages accumulated so far
                 html_lines = "".join(
-                    f"<div style='color:#6b7280;font-size:1rem;padding:0.3rem 0;'>"
-                    f"⚽ {msg}</div>"
+                    f"<div style='color:#6b7280;font-size:1.6rem;padding:0.4rem 0;'>"
+                    f"{msg}</div>"
                     for msg in shown_messages
                 )
                 loading_placeholder.markdown(
