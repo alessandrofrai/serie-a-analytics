@@ -116,7 +116,11 @@ def render_team_radar(
 
     # Create labels with values if show_values is True (values are not percentages)
     if show_values:
-        categories_with_values = [f"{cat}<br><b>{val:.0f}</b>" for cat, val in zip(categories, values)]
+        # Use colored span for values (matching comparison chart style)
+        categories_with_values = [
+            f"{cat}<br><span style='color:{color};font-weight:600'>{val:.0f}</span>"
+            for cat, val in zip(categories, values)
+        ]
     else:
         categories_with_values = categories
 
@@ -321,9 +325,9 @@ def render_radar_to_base64(
 
     values_plot = values + values[:1]  # Complete the loop
 
-    # Force a square canvas to avoid elliptical distortion in PDF scaling
-    size = min(width, height)
-    fig, ax = plt.subplots(figsize=(size/100, size/100), subplot_kw=dict(polar=True))
+    # Create a SQUARE figure - this is CRITICAL for circular polar plots
+    # bbox_inches='tight' distorts polar plots, so we use fixed square dimensions
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
     fig.patch.set_facecolor('white')
     ax.set_facecolor('white')
 
@@ -331,37 +335,151 @@ def render_radar_to_base64(
     ax.plot(angles, values_plot, 'o-', linewidth=2.5, color=color)
     ax.fill(angles, values_plot, alpha=0.35, color=color)
 
-    # Set the labels
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(categories, fontsize=9, fontweight='bold')
+    # Set radial limits
+    ax.set_ylim(0, 100)
+    ax.set_yticks([25, 50, 75, 100])
+    ax.set_yticklabels(['25', '50', '75', '100'], fontsize=8, color='#666')
+
+    # Use set_thetagrids for labels - this is the standard matplotlib approach
+    # that guarantees labels are included in the saved figure
+    # Create composite labels: "Category\nValue"
+    composite_labels = [f"{cat}\n{val:.0f}" for cat, val in zip(categories, values)]
+
+    # Convert angles to degrees and set the labels
+    angle_degrees = [np.degrees(a) for a in angles[:-1]]
+    ax.set_thetagrids(angle_degrees, composite_labels, fontsize=10, fontweight='bold', color='#333')
+
+    # Style the grid
+    ax.grid(True, color='#d1d5db', linestyle='-', linewidth=0.5)
+    ax.spines['polar'].set_color('#d1d5db')
+
+    # Export to base64 - DO NOT use bbox_inches='tight' as it distorts polar plots
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=150,
+                facecolor='white', edgecolor='none')
+    buffer.seek(0)
+    img_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    plt.close(fig)
+
+    return f"data:image/png;base64,{img_base64}"
+
+
+def render_radar_comparison_to_base64(
+    team_metrics_a: pd.DataFrame,
+    team_metrics_b: pd.DataFrame,
+    label_a: str,
+    label_b: str,
+    color_a: str = '#3b82f6',
+    color_b: str = '#ef4444',
+    width: int = 400,
+    height: int = 400
+) -> str:
+    """
+    Generate comparison radar chart and return as base64 PNG for PDF export.
+
+    Args:
+        team_metrics_a: DataFrame with team A metrics
+        team_metrics_b: DataFrame with team B metrics
+        label_a: Label for team A
+        label_b: Label for team B
+        color_a: Color for team A (default blue)
+        color_b: Color for team B (default red)
+        width: Image width in pixels
+        height: Image height in pixels
+
+    Returns:
+        Base64 data URL string (data:image/png;base64,...)
+    """
+    import io
+    import base64
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from matplotlib.patches import Patch
+
+    # Calculate radar values for both teams
+    radar_a = calculate_radar_values(team_metrics_a)
+    radar_b = calculate_radar_values(team_metrics_b)
+
+    # Prepare data
+    categories = RADAR_LABELS
+    values_a = [radar_a.get(cat, 50.0) for cat in categories]
+    values_b = [radar_b.get(cat, 50.0) for cat in categories]
+
+    # Number of variables
+    N = len(categories)
+
+    # Compute angle for each category
+    angles = [n / float(N) * 2 * np.pi for n in range(N)]
+    angles += angles[:1]  # Complete the loop
+
+    values_a_plot = values_a + values_a[:1]
+    values_b_plot = values_b + values_b[:1]
+
+    # Create a SQUARE figure (same as single radar)
+    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
+    fig.patch.set_facecolor('white')
+    ax.set_facecolor('white')
+
+    # Draw team A radar
+    ax.plot(angles, values_a_plot, 'o-', linewidth=2.5, color=color_a, label=label_a)
+    ax.fill(angles, values_a_plot, alpha=0.35, color=color_a)
+
+    # Draw team B radar
+    ax.plot(angles, values_b_plot, 'o-', linewidth=2.5, color=color_b, label=label_b)
+    ax.fill(angles, values_b_plot, alpha=0.25, color=color_b)
 
     # Set radial limits
     ax.set_ylim(0, 100)
     ax.set_yticks([25, 50, 75, 100])
     ax.set_yticklabels(['25', '50', '75', '100'], fontsize=8, color='#666')
 
-    # Add value labels on the radar points
-    for angle, value, cat in zip(angles[:-1], values, categories):
-        ax.annotate(
-            f'{value:.0f}',
-            xy=(angle, value),
-            xytext=(angle, value + 8),
-            ha='center',
-            va='bottom',
-            fontsize=8,
-            fontweight='bold',
-            color=color
-        )
+    # Set category names via thetagrids
+    angle_degrees = [np.degrees(a) for a in angles[:-1]]
+    ax.set_thetagrids(angle_degrees, categories, fontsize=10, fontweight='bold', color='#333')
+
+    # Render figure to get actual tick label positions
+    fig.canvas.draw()
+
+    # Get tick labels and position colored values below each one
+    ticklabels = ax.xaxis.get_ticklabels()
+    inv_trans = fig.transFigure.inverted()
+
+    for i, (label, val_a, val_b) in enumerate(zip(ticklabels, values_a, values_b)):
+        if label.get_visible():
+            # Get bounding box of this category label
+            bbox = label.get_window_extent()
+
+            # Position colored values below the category label
+            center_x = (bbox.x0 + bbox.x1) / 2
+            below_y = bbox.y0 - 2  # Just below the label
+
+            # Convert to figure coordinates
+            fig_x, fig_y = inv_trans.transform((center_x, below_y))
+
+            # Add colored values
+            fig.text(fig_x - 0.025, fig_y, f"{int(val_a)}",
+                     ha='right', va='top', fontsize=10, fontweight='bold',
+                     color=color_a)
+            fig.text(fig_x, fig_y, " / ",
+                     ha='center', va='top', fontsize=10, fontweight='bold',
+                     color='#333')
+            fig.text(fig_x + 0.025, fig_y, f"{int(val_b)}",
+                     ha='left', va='top', fontsize=10, fontweight='bold',
+                     color=color_b)
 
     # Style the grid
     ax.grid(True, color='#d1d5db', linestyle='-', linewidth=0.5)
     ax.spines['polar'].set_color('#d1d5db')
 
-    # Keep margins inside a square canvas to prevent cropping and distortion
-    # Extra padding to avoid label clipping on the sides
-    fig.subplots_adjust(left=0.18, right=0.82, top=0.88, bottom=0.12)
+    # Add legend at the top - position adjusted for square figure
+    legend_elements = [
+        Patch(facecolor=color_a, alpha=0.5, label=label_a),
+        Patch(facecolor=color_b, alpha=0.5, label=label_b)
+    ]
+    fig.legend(handles=legend_elements, loc='upper center', ncol=2, fontsize=8, frameon=False,
+               bbox_to_anchor=(0.5, 0.98))
 
-    # Export to base64 (avoid tight bbox that can change aspect ratio)
+    # Export to base64 - DO NOT use bbox_inches='tight' as it distorts polar plots
     buffer = io.BytesIO()
     fig.savefig(buffer, format='png', dpi=150,
                 facecolor='white', edgecolor='none')

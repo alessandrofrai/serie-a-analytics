@@ -58,6 +58,7 @@ from components.team_radar import (
     calculate_radar_values,
     get_metrics_by_category,
     render_radar_to_base64,
+    render_radar_comparison_to_base64,
 )
 from components.performance_scatterplot import render_performance_section
 from components.game_phases import render_game_phases_section
@@ -211,6 +212,17 @@ def render_radar_section(
     ]
     comparison_options = ["Nessuno"] + comparison_df['label'].tolist()
 
+    # Persist comparison selection across page reruns
+    # Use a unique key per team+manager to avoid cross-contamination
+    persist_key = f"radar_compare_persist_{team_id}_{manager_id}"
+
+    # Determine the correct index based on persisted value
+    default_index = 0
+    if persist_key in st.session_state:
+        persisted_label = st.session_state[persist_key]
+        if persisted_label in comparison_options:
+            default_index = comparison_options.index(persisted_label)
+
     col_radar_title, col_radar_select = st.columns([3, 1])
     with col_radar_title:
         st.markdown("### :material/analytics: Profilo Tattico Squadra")
@@ -218,9 +230,11 @@ def render_radar_section(
         selected_label = st.selectbox(
             "Confronta con",
             options=comparison_options,
-            index=0,
+            index=default_index,
             key="radar_compare_select"
         )
+        # Persist the selection
+        st.session_state[persist_key] = selected_label
 
     comparison_available = False
     other_team_metrics = None
@@ -240,6 +254,61 @@ def render_radar_section(
             if len(other_team_metrics) > 0:
                 comparison_available = True
                 other_label = f"{selected_row['team_name']} · {other_manager_name}"
+                # Save comparison data for PDF generation (include current team context)
+                st.session_state.radar_comparison_data = {
+                    'other_team_metrics': other_team_metrics,
+                    'other_label': other_label,
+                    'other_team_id': other_team_id,
+                    'other_manager_id': other_manager_id,
+                    'current_team_id': team_id,
+                    'current_manager_id': manager_id
+                }
+
+    # Clear comparison data only if user explicitly selected "Nessuno"
+    if selected_label == "Nessuno" and 'radar_comparison_data' in st.session_state:
+        del st.session_state['radar_comparison_data']
+
+    # Tooltip info icon for radar chart - dynamic content with metrics
+    metrics_by_cat = get_metrics_by_category(team_metrics)
+    radar_values = calculate_radar_values(team_metrics)
+
+    # Build dynamic tooltip content for each category
+    categories_html = ""
+    category_order = ['Attacco', 'Difesa', 'Possesso', 'Pressing', 'Palle Inattive', 'Transizioni']
+    for cat_name in category_order:
+        cat_metrics = metrics_by_cat.get(cat_name, pd.DataFrame())
+        cat_avg = radar_values.get(cat_name, 50)
+        if len(cat_metrics) == 0:
+            continue
+
+        # Top 3 metrics with bars
+        top_3 = cat_metrics.head(3)
+        top_3_html = ""
+        for _, row in top_3.iterrows():
+            metric_name = row['metric_name']
+            percentile = row['percentile']
+            display_name = METRIC_NAMES.get(metric_name, metric_name.replace('_', ' ').title())
+            # Color based on percentile
+            if percentile >= 66:
+                bar_color = "#10b981"
+            elif percentile >= 33:
+                bar_color = "#f59e0b"
+            else:
+                bar_color = "#ef4444"
+            top_3_html += f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span style="flex:1;color:#e2e8f0;font-size:0.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{display_name}</span><div style="width:50px;height:6px;background:#334155;border-radius:3px;overflow:hidden;"><div style="width:{percentile}%;height:100%;background:{bar_color};border-radius:3px;"></div></div><span style="color:#9ca3af;font-size:0.65rem;width:24px;text-align:right;">{percentile:.0f}</span></div>'
+
+        # Remaining metrics as comma-separated list
+        remaining = cat_metrics.iloc[3:]
+        remaining_html = ""
+        if len(remaining) > 0:
+            remaining_names = [METRIC_NAMES.get(r['metric_name'], r['metric_name'].replace('_', ' ').title()) for _, r in remaining.iterrows()]
+            remaining_html = f'<div style="font-size:0.6rem;color:#64748b;margin-top:2px;font-style:italic;">Altre: {", ".join(remaining_names)}</div>'
+
+        categories_html += f'<div style="margin-bottom:10px;"><div style="font-weight:600;color:#60a5fa;font-size:0.72rem;margin-bottom:4px;">{cat_name} <span style="color:#9ca3af;font-weight:400;">({cat_avg:.0f})</span></div>{top_3_html}{remaining_html}</div>'
+
+    radar_tooltip_css = '''<style>.radar-info-wrapper{position:relative;height:0;z-index:999;}.radar-info-container{position:absolute;top:8px;left:8px;}.radar-info-icon{width:20px;height:20px;border-radius:50%;background:#6b7280;color:white;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;font-style:italic;}.radar-info-container:hover .radar-info-icon{background:#9ca3af;}.radar-tooltip{visibility:hidden;opacity:0;position:absolute;top:20px;left:0;width:340px;padding:14px;background:#0f172a;color:white;font-size:0.75rem;line-height:1.4;border-radius:10px;z-index:100;box-shadow:0 6px 20px rgba(0,0,0,0.5);max-height:480px;overflow-y:auto;transition:visibility 0s linear 0.3s,opacity 0.15s ease;}.radar-info-container:hover .radar-tooltip,.radar-tooltip:hover{visibility:visible;opacity:1;transition:visibility 0s linear 0s,opacity 0.15s ease;}</style>'''
+    radar_tooltip_html = f'''<div class="radar-info-wrapper"><div class="radar-info-container"><div class="radar-info-icon">i</div><div class="radar-tooltip"><div style="font-weight:700;margin-bottom:10px;font-size:0.8rem;color:#f1f5f9;">📊 Metriche del Radar</div><div style="font-size:0.65rem;color:#94a3b8;margin-bottom:12px;">Ogni valore è la media dei percentili delle metriche associate (0-100).</div>{categories_html}</div></div></div>'''
+    st.markdown(radar_tooltip_css + radar_tooltip_html, unsafe_allow_html=True)
 
     if comparison_available:
         render_team_radar_comparison(
@@ -623,7 +692,25 @@ def dashboard_main():
         # Generate base64 images for PDF
         try:
             logo_base64 = get_team_logo_base64(team_id)
-            radar_base64 = render_radar_to_base64(team_metrics)
+            # Use comparison radar if available and matches current team context
+            comparison = st.session_state.get('radar_comparison_data')
+            use_comparison = (
+                comparison is not None
+                and comparison.get('current_team_id') == team_id
+                and comparison.get('current_manager_id') == manager_id
+            )
+
+            if use_comparison:
+                radar_base64 = render_radar_comparison_to_base64(
+                    team_metrics_a=team_metrics,
+                    team_metrics_b=comparison['other_team_metrics'],
+                    label_a=f"{team_name} · {manager_name}",
+                    label_b=comparison['other_label'],
+                    color_a='#3b82f6',
+                    color_b='#ef4444'
+                )
+            else:
+                radar_base64 = render_radar_to_base64(team_metrics)
             pitch_base64 = render_formation_to_base64(
                 formation,
                 player_names=player_names,
