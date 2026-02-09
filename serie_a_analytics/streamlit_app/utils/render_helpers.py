@@ -260,8 +260,15 @@ def _render_metric_distribution_sparkline(
     # Pad x-range so distribution/violin isn't clipped
     vmin = min(values)
     vmax = max(values)
+
+    # CRITICAL FIX: Include selected_value in range calculation
+    # This ensures the highlighted point is ALWAYS visible
+    if selected_value is not None:
+        vmin = min(vmin, selected_value)
+        vmax = max(vmax, selected_value)
+
     span = max(vmax - vmin, 1e-6)
-    pad = span * 0.08
+    pad = span * 0.15  # Increased from 0.08 to 0.15 for marker visibility
 
     # Invert axis for metrics where lower is better (so "better" is to the right)
     if lower_is_better:
