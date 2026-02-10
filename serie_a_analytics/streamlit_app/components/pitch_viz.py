@@ -133,7 +133,8 @@ def create_carry_pitch(df_events: pd.DataFrame, player_id: int) -> plt.Figure:
     """
     Create carry map showing positive (blue) and negative (orange) carries.
 
-    Uses dashed lines to distinguish from passes.
+    Uses dashed lines with directional arrowheads at the end to show
+    where the carry started and ended.
 
     Args:
         df_events: DataFrame with player events
@@ -165,7 +166,7 @@ def create_carry_pitch(df_events: pd.DataFrame, player_id: int) -> plt.Figure:
     positive = carries[carries['outcome'] == 1]
     negative = carries[carries['outcome'] == 0]
 
-    # Draw negative carries first
+    # Draw negative carries first (dashed lines)
     if not negative.empty:
         pitch.lines(
             negative['start_x'].values,
@@ -179,8 +180,28 @@ def create_carry_pitch(df_events: pd.DataFrame, player_id: int) -> plt.Figure:
             ax=ax,
             label=f'Negativi ({len(negative)})'
         )
+        # Add directional arrowheads at end points
+        # Calculate angles using mplsoccer's official method
+        angle_neg, _ = pitch.calculate_angle_and_distance(
+            negative['start_x'].values,
+            negative['start_y'].values,
+            negative['end_x'].values,
+            negative['end_y'].values,
+            degrees=True
+        )
+        pitch.scatter(
+            negative['end_x'].values,
+            negative['end_y'].values,
+            rotation_degrees=angle_neg,
+            marker='^',
+            s=35,
+            color=COLORS['carry_negative'],
+            alpha=0.7,
+            ax=ax,
+            zorder=3
+        )
 
-    # Draw positive carries
+    # Draw positive carries (dashed lines)
     if not positive.empty:
         pitch.lines(
             positive['start_x'].values,
@@ -193,6 +214,25 @@ def create_carry_pitch(df_events: pd.DataFrame, player_id: int) -> plt.Figure:
             alpha=0.6,
             ax=ax,
             label=f'Positivi ({len(positive)})'
+        )
+        # Add directional arrowheads at end points
+        angle_pos, _ = pitch.calculate_angle_and_distance(
+            positive['start_x'].values,
+            positive['start_y'].values,
+            positive['end_x'].values,
+            positive['end_y'].values,
+            degrees=True
+        )
+        pitch.scatter(
+            positive['end_x'].values,
+            positive['end_y'].values,
+            rotation_degrees=angle_pos,
+            marker='^',
+            s=35,
+            color=COLORS['carry_positive'],
+            alpha=0.8,
+            ax=ax,
+            zorder=3
         )
 
     ax.legend(loc='upper right', fontsize=7, framealpha=0.8)
