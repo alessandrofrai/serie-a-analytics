@@ -12,6 +12,16 @@ import sys
 import base64
 from io import BytesIO
 
+# Try to import weasyprint for direct PDF generation
+# WeasyPrint requires system libraries (pango, cairo, etc.)
+# If not installed, falls back to HTML download
+try:
+    from weasyprint import HTML as WeasyHTML
+    WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError):
+    WEASYPRINT_AVAILABLE = False
+    WeasyHTML = None
+
 # Add parent paths for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -30,6 +40,8 @@ from utils.data_helpers import (
     load_data,
     load_sofascore_player_ratings,
     load_player_external_ids,
+    load_player_events_for_player,
+    load_matches_for_events,
     get_player_data_for_team,
     get_player_basic_info,
     get_player_season_data,
@@ -40,6 +52,7 @@ from utils.data_helpers import (
     get_team_logo_base64,
 )
 from components.season_chart import render_season_chart_streamlit, render_chart_legend
+from components.pitch_viz import render_pitch_visualizations, render_match_filter, generate_pitch_images_base64
 from components.season_chart import (
     get_rating_color, get_minutes_color, render_events,
     RATING_BAR_HEIGHT, MINUTES_BAR_HEIGHT, BAR_WIDTH, GRAY_COLOR, COLUMN_MIN_WIDTH, COLUMN_GAP
@@ -73,9 +86,14 @@ def generate_pdf_html(
     usage: dict,
     season_data: list,
     player_img_b64: str,
-    team_logo_b64: str
+    team_logo_b64: str,
+    pitch_images: dict = None
 ) -> str:
-    """Generate HTML for landscape A4 PDF export."""
+    """Generate HTML for landscape A4 PDF export.
+
+    Args:
+        pitch_images: Optional dict with 'pass', 'carry', 'duel' base64 images
+    """
 
     score = usage['score']
     label, color = get_usage_label(score)
@@ -168,6 +186,38 @@ def generate_pdf_html(
 
     chart_html = '\n'.join(chart_columns)
 
+    # Generate pitch section HTML if images are provided
+    pitch_section_html = ''
+    if pitch_images:
+        pass_img = pitch_images.get('pass')
+        carry_img = pitch_images.get('carry')
+        duel_img = pitch_images.get('duel')
+
+        # Only show section if at least one image exists
+        if pass_img or carry_img or duel_img:
+            pass_html = f'<img src="data:image/png;base64,{pass_img}" class="pitch-img">' if pass_img else '<div class="pitch-img" style="background:#f1f5f9;height:150px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Nessun passaggio</div>'
+            carry_html = f'<img src="data:image/png;base64,{carry_img}" class="pitch-img">' if carry_img else '<div class="pitch-img" style="background:#f1f5f9;height:150px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Nessuna conduzione</div>'
+            duel_html = f'<img src="data:image/png;base64,{duel_img}" class="pitch-img">' if duel_img else '<div class="pitch-img" style="background:#f1f5f9;height:150px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Nessun duello</div>'
+
+            pitch_section_html = f'''
+    <div class="pitch-section">
+      <div class="pitch-title">Mappa Azioni</div>
+      <div class="pitch-container">
+        <div class="pitch-item">
+          <div class="pitch-label">Passaggi Open Play</div>
+          {pass_html}
+        </div>
+        <div class="pitch-item">
+          <div class="pitch-label">Conduzioni</div>
+          {carry_html}
+        </div>
+        <div class="pitch-item">
+          <div class="pitch-label">Azioni Difensive</div>
+          {duel_html}
+        </div>
+      </div>
+    </div>'''
+
     # Full PDF HTML - Landscape A4
     html = f'''<!DOCTYPE html>
 <html>
@@ -176,7 +226,7 @@ def generate_pdf_html(
   <style>
     @page {{
       size: A4 landscape;
-      margin: 15mm;
+      margin: 9mm 0mm 0mm 15mm;
     }}
     * {{
       box-sizing: border-box;
@@ -484,6 +534,58 @@ def generate_pdf_html(
       height: 14px;
       border-radius: 3px;
     }}
+    /* PITCH VISUALIZATIONS */
+    .pitch-section {{
+      margin-top: 15px;
+    }}
+    .pitch-title {{
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #0c1929;
+      margin-bottom: 10px;
+    }}
+    .pitch-container {{
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }}
+    .pitch-item {{
+      flex: 1;
+      text-align: center;
+    }}
+    .pitch-label {{
+      font-size: 1rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }}
+    .pitch-img {{
+      width: 100%;
+      max-width: 340px;
+      height: auto;
+    }}
+    .pitch-legend {{
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      font-size: 0.65rem;
+      color: #6b7280;
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: #f8fafc;
+      border-radius: 6px;
+      flex-wrap: wrap;
+    }}
+    .pitch-legend-item {{
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }}
+    .pitch-legend-dot {{
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }}
     /* FOOTER */
     .footer {{
       margin-top: 10px;
@@ -617,14 +719,34 @@ def generate_pdf_html(
       </div>
     </div>
 
-    <div class="footer">
-      Serie A 2015-2016 • Generato da Serie A Analytics
-    </div>
+    {pitch_section_html}
   </div>
 </body>
 </html>'''
 
     return html
+
+
+def generate_pdf_bytes(html_content: str) -> bytes:
+    """
+    Convert HTML content to PDF bytes using WeasyPrint.
+
+    Args:
+        html_content: The HTML string to convert
+
+    Returns:
+        PDF as bytes, or None if WeasyPrint is not available
+    """
+    if not WEASYPRINT_AVAILABLE:
+        return None
+
+    try:
+        pdf_bytes = WeasyHTML(string=html_content).write_pdf()
+        return pdf_bytes
+    except Exception as e:
+        import logging
+        logging.warning(f"WeasyPrint PDF generation failed: {e}")
+        return None
 
 
 def get_position_label(position: str) -> str:
@@ -1125,6 +1247,58 @@ def render_stats_summary(df_player: pd.DataFrame):
             ''', unsafe_allow_html=True)
 
 
+def render_pitch_events(sofascore_player_id: int, sofascore_team_id: int):
+    """
+    Render pitch visualizations (passes, carries, duels) for a player.
+
+    Shows three horizontal pitch maps with:
+    - Passes: green arrows (success) / red arrows (fail)
+    - Carries: blue dashed lines (positive) / orange dashed lines (negative)
+    - Duels: colored points by type (aerial, ground, tackle)
+
+    Includes a slider to filter by last N matches.
+    """
+    # Load external IDs mapping
+    external_ids = load_player_external_ids()
+    if external_ids.empty:
+        return  # No mapping table
+
+    # Find StatsBomb player ID for this SofaScore player
+    mapping = external_ids[
+        (external_ids['external_id'].astype(str) == str(sofascore_player_id)) &
+        (external_ids['provider'] == 'sofascore')
+    ]
+
+    if mapping.empty:
+        return  # No mapping found
+
+    statsbomb_id = int(mapping.iloc[0]['player_id'])
+
+    # Load player events - filtered server-side for this player only
+    df_events = load_player_events_for_player(statsbomb_id)
+    if df_events.empty:
+        return  # No events for this player
+
+    # Load match dates for filtering
+    match_dates = load_matches_for_events()
+
+    st.markdown("### Mappa Azioni")
+
+    # Get number of matches this player has played
+    num_matches = df_events['match_id'].nunique()
+
+    # Render filter slider (dynamically adapts to player's matches)
+    last_n = render_match_filter(num_matches)
+
+    # Render the three pitch visualizations
+    render_pitch_visualizations(
+        player_id=statsbomb_id,
+        df_events=df_events,
+        last_n_matches=last_n,
+        match_dates=match_dates
+    )
+
+
 def render_statsbomb_metrics(sofascore_player_id: int, sofascore_team_id: int):
     """
     Render StatsBomb metrics if available.
@@ -1368,6 +1542,29 @@ def main():
         team_logo_b64 = get_team_logo_base64(team_id)
         safe_name = pdf_player_name.replace(" ", "_").replace(".", "")
 
+        # Generate pitch images for PDF export
+        pitch_images = None
+        external_ids = load_player_external_ids()
+        if not external_ids.empty:
+            mapping = external_ids[
+                (external_ids['external_id'].astype(str) == str(player_id)) &
+                (external_ids['provider'] == 'sofascore')
+            ]
+            if not mapping.empty:
+                statsbomb_id = int(mapping.iloc[0]['player_id'])
+                df_events = load_player_events_for_player(statsbomb_id)
+                if not df_events.empty:
+                    match_dates = load_matches_for_events()
+                    # Use default of 4 matches for PDF (consistent with UI default)
+                    num_matches = df_events['match_id'].nunique()
+                    last_n = min(4, num_matches) if num_matches > 0 else None
+                    pitch_images = generate_pitch_images_base64(
+                        player_id=statsbomb_id,
+                        df_events=df_events,
+                        last_n_matches=last_n,
+                        match_dates=match_dates
+                    )
+
         pdf_html = generate_pdf_html(
             player_name=pdf_player_name,
             team_name=info["team_name"] if info else "",
@@ -1376,50 +1573,64 @@ def main():
             usage=usage,
             season_data=season_data,
             player_img_b64=player_img_b64,
-            team_logo_b64=team_logo_b64
+            team_logo_b64=team_logo_b64,
+            pitch_images=pitch_images
         )
 
-        # Dialog with download button + instructions
-        @st.dialog("Scarica profilo")
-        def show_download_dialog():
-            st.markdown("""
-            ### Come salvare in PDF
+        # Try to generate PDF directly using WeasyPrint
+        pdf_bytes = generate_pdf_bytes(pdf_html)
 
-            1. Clicca **Scarica** qui sotto
-            2. Apri il file HTML nel browser (doppio click)
-            3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
-            4. Seleziona **"Salva come PDF"**
-            5. Imposta **orientamento orizzontale**
-            """)
+        if pdf_bytes:
+            # WeasyPrint available - direct PDF download
             st.download_button(
-                label="Scarica",
-                data=pdf_html.encode('utf-8'),
-                file_name=f"profilo_{safe_name}.html",
-                mime="text/html",
-                key="html_export_dialog_btn",
+                label="Scarica PDF",
+                data=pdf_bytes,
+                file_name=f"profilo_{safe_name}.pdf",
+                mime="application/pdf",
+                key="pdf_export_btn",
                 use_container_width=True
             )
+        else:
+            # Fallback to HTML with instructions
+            @st.dialog("Scarica profilo")
+            def show_download_dialog():
+                st.markdown("""
+                ### Come salvare in PDF
 
-        # Dialog with ONLY instructions (no download button)
-        @st.dialog("Come salvare in PDF")
-        def show_info_dialog():
-            st.markdown("""
-            ### Istruzioni
+                1. Clicca **Scarica** qui sotto
+                2. Apri il file HTML nel browser (doppio click)
+                3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
+                4. Seleziona **"Salva come PDF"**
+                5. Imposta **orientamento orizzontale**
+                """)
+                st.download_button(
+                    label="Scarica HTML",
+                    data=pdf_html.encode('utf-8'),
+                    file_name=f"profilo_{safe_name}.html",
+                    mime="text/html",
+                    key="html_export_dialog_btn",
+                    use_container_width=True
+                )
 
-            1. Clicca il bottone **Scarica**
-            2. Apri il file HTML nel browser (doppio click)
-            3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
-            4. Seleziona **"Salva come PDF"**
-            5. Imposta **orientamento orizzontale**
-            """)
+            @st.dialog("Come salvare in PDF")
+            def show_info_dialog():
+                st.markdown("""
+                ### Istruzioni
 
-        btn_col1, btn_col2 = st.columns([2, 1], gap="small")
-        with btn_col1:
-            if st.button("Scarica", key="open_download_dialog", use_container_width=True):
-                show_download_dialog()
-        with btn_col2:
-            if st.button("?", key="open_help_dialog", use_container_width=True):
-                show_info_dialog()
+                1. Clicca il bottone **Scarica**
+                2. Apri il file HTML nel browser (doppio click)
+                3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
+                4. Seleziona **"Salva come PDF"**
+                5. Imposta **orientamento orizzontale**
+                """)
+
+            btn_col1, btn_col2 = st.columns([2, 1], gap="small")
+            with btn_col1:
+                if st.button("Scarica", key="open_download_dialog", use_container_width=True):
+                    show_download_dialog()
+            with btn_col2:
+                if st.button("?", key="open_help_dialog", use_container_width=True):
+                    show_info_dialog()
 
     # SECTION 1: Header with player info and usage score
     render_header_section(player_id, team_id, df_player, df_all)
@@ -1430,6 +1641,11 @@ def main():
     season_data = get_player_season_data(player_id, team_id)
     render_season_chart_streamlit(season_data)
     render_chart_legend()
+
+    st.markdown("---")
+
+    # SECTION 2.5: Pitch Visualizations (passes, carries, duels)
+    render_pitch_events(player_id, team_id)
 
     st.markdown("---")
 
