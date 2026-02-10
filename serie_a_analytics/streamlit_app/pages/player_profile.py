@@ -77,12 +77,14 @@ def generate_pdf_html(
     season_data: list,
     player_img_b64: str,
     team_logo_b64: str,
-    pitch_images: dict = None
+    pitch_images: dict = None,
+    pitch_matches_count: int = None
 ) -> str:
     """Generate HTML for landscape A4 PDF export.
 
     Args:
         pitch_images: Optional dict with 'pass', 'carry', 'duel' base64 images
+        pitch_matches_count: Number of matches shown in pitch visualizations
     """
 
     score = usage['score']
@@ -189,9 +191,14 @@ def generate_pdf_html(
             carry_html = f'<img src="data:image/png;base64,{carry_img}" class="pitch-img">' if carry_img else '<div class="pitch-img" style="background:#f1f5f9;height:150px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Nessuna conduzione</div>'
             duel_html = f'<img src="data:image/png;base64,{duel_img}" class="pitch-img">' if duel_img else '<div class="pitch-img" style="background:#f1f5f9;height:150px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Nessun duello</div>'
 
+            # Build title with match count if available
+            pitch_title = "Mappa Azioni"
+            if pitch_matches_count:
+                pitch_title = f"Mappa Azioni (Ultime {pitch_matches_count} partite)"
+
             pitch_section_html = f'''
     <div class="pitch-section">
-      <div class="pitch-title">Mappa Azioni</div>
+      <div class="pitch-title">{pitch_title}</div>
       <div class="pitch-container">
         <div class="pitch-item">
           <div class="pitch-label">Passaggi Open Play</div>
@@ -1512,6 +1519,7 @@ def main():
 
         # Generate pitch images for PDF export
         pitch_images = None
+        pitch_matches_used = None
         external_ids = load_player_external_ids()
         if not external_ids.empty:
             mapping = external_ids[
@@ -1525,11 +1533,11 @@ def main():
                     match_dates = load_matches_for_events()
                     # Use default of 4 matches for PDF (consistent with UI default)
                     num_matches = df_events['match_id'].nunique()
-                    last_n = min(4, num_matches) if num_matches > 0 else None
+                    pitch_matches_used = min(4, num_matches) if num_matches > 0 else None
                     pitch_images = generate_pitch_images_base64(
                         player_id=statsbomb_id,
                         df_events=df_events,
-                        last_n_matches=last_n,
+                        last_n_matches=pitch_matches_used,
                         match_dates=match_dates
                     )
 
@@ -1542,7 +1550,8 @@ def main():
             season_data=season_data,
             player_img_b64=player_img_b64,
             team_logo_b64=team_logo_b64,
-            pitch_images=pitch_images
+            pitch_images=pitch_images,
+            pitch_matches_count=pitch_matches_used
         )
 
         # HTML download with instructions dialog
