@@ -2075,9 +2075,10 @@ def get_roster_for_team(sofascore_team_id: int) -> pd.DataFrame:
         return pd.DataFrame()
 
     # Aggregate by player
+    # Use mode for position to get most frequent position played
     roster = team_df.groupby('player_id').agg({
         'player_name': 'first',
-        'position': 'first',
+        'position': lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else x.iloc[0],
         'shirt_number': 'first',
         'minutes_played': 'sum',
         'rating': 'mean',
