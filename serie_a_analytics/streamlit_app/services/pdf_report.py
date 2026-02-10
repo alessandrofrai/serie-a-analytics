@@ -487,12 +487,6 @@ class PDFReportGenerator:
                 story.extend(game_phases_section)
                 story.append(PageBreak())
 
-            # Page 4+: Player Profiles (skipped if no player analysis was generated)
-            player_profiles_section = self._build_player_profiles_section()
-            if player_profiles_section:
-                story.extend(player_profiles_section)
-                story.append(PageBreak())
-
             # Page 4: Metrics Summary (skipped if no metrics selected)
             total_metrics = (
                 len(self.config.positive_metrics) +
@@ -519,6 +513,12 @@ class PDFReportGenerator:
             if negative_pages:
                 story.append(PageBreak())
                 story.extend(negative_pages)
+
+            # Last Page: Player Profiles (Analisi Singoli Giocatori)
+            player_profiles_section = self._build_player_profiles_section()
+            if player_profiles_section:
+                story.append(PageBreak())
+                story.extend(player_profiles_section)
 
             doc.build(story)
 
