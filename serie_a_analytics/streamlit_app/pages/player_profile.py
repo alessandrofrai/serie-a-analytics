@@ -12,16 +12,6 @@ import sys
 import base64
 from io import BytesIO
 
-# Try to import weasyprint for direct PDF generation
-# WeasyPrint requires system libraries (pango, cairo, etc.)
-# If not installed, falls back to HTML download
-try:
-    from weasyprint import HTML as WeasyHTML
-    WEASYPRINT_AVAILABLE = True
-except (ImportError, OSError):
-    WEASYPRINT_AVAILABLE = False
-    WeasyHTML = None
-
 # Add parent paths for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -725,28 +715,6 @@ def generate_pdf_html(
 </html>'''
 
     return html
-
-
-def generate_pdf_bytes(html_content: str) -> bytes:
-    """
-    Convert HTML content to PDF bytes using WeasyPrint.
-
-    Args:
-        html_content: The HTML string to convert
-
-    Returns:
-        PDF as bytes, or None if WeasyPrint is not available
-    """
-    if not WEASYPRINT_AVAILABLE:
-        return None
-
-    try:
-        pdf_bytes = WeasyHTML(string=html_content).write_pdf()
-        return pdf_bytes
-    except Exception as e:
-        import logging
-        logging.warning(f"WeasyPrint PDF generation failed: {e}")
-        return None
 
 
 def get_position_label(position: str) -> str:
@@ -1577,60 +1545,46 @@ def main():
             pitch_images=pitch_images
         )
 
-        # Try to generate PDF directly using WeasyPrint
-        pdf_bytes = generate_pdf_bytes(pdf_html)
+        # HTML download with instructions dialog
+        @st.dialog("Scarica profilo")
+        def show_download_dialog():
+            st.markdown("""
+            ### Come salvare in PDF
 
-        if pdf_bytes:
-            # WeasyPrint available - direct PDF download
+            1. Clicca **Scarica** qui sotto
+            2. Apri il file HTML nel browser (doppio click)
+            3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
+            4. Seleziona **"Salva come PDF"**
+            5. Imposta **orientamento orizzontale**
+            """)
             st.download_button(
-                label="Scarica PDF",
-                data=pdf_bytes,
-                file_name=f"profilo_{safe_name}.pdf",
-                mime="application/pdf",
-                key="pdf_export_btn",
+                label="Scarica HTML",
+                data=pdf_html.encode('utf-8'),
+                file_name=f"profilo_{safe_name}.html",
+                mime="text/html",
+                key="html_export_dialog_btn",
                 use_container_width=True
             )
-        else:
-            # Fallback to HTML with instructions
-            @st.dialog("Scarica profilo")
-            def show_download_dialog():
-                st.markdown("""
-                ### Come salvare in PDF
 
-                1. Clicca **Scarica** qui sotto
-                2. Apri il file HTML nel browser (doppio click)
-                3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
-                4. Seleziona **"Salva come PDF"**
-                5. Imposta **orientamento orizzontale**
-                """)
-                st.download_button(
-                    label="Scarica HTML",
-                    data=pdf_html.encode('utf-8'),
-                    file_name=f"profilo_{safe_name}.html",
-                    mime="text/html",
-                    key="html_export_dialog_btn",
-                    use_container_width=True
-                )
+        @st.dialog("Come salvare in PDF")
+        def show_info_dialog():
+            st.markdown("""
+            ### Istruzioni
 
-            @st.dialog("Come salvare in PDF")
-            def show_info_dialog():
-                st.markdown("""
-                ### Istruzioni
+            1. Clicca il bottone **Scarica**
+            2. Apri il file HTML nel browser (doppio click)
+            3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
+            4. Seleziona **"Salva come PDF"**
+            5. Imposta **orientamento orizzontale**
+            """)
 
-                1. Clicca il bottone **Scarica**
-                2. Apri il file HTML nel browser (doppio click)
-                3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
-                4. Seleziona **"Salva come PDF"**
-                5. Imposta **orientamento orizzontale**
-                """)
-
-            btn_col1, btn_col2 = st.columns([2, 1], gap="small")
-            with btn_col1:
-                if st.button("Scarica", key="open_download_dialog", use_container_width=True):
-                    show_download_dialog()
-            with btn_col2:
-                if st.button("?", key="open_help_dialog", use_container_width=True):
-                    show_info_dialog()
+        btn_col1, btn_col2 = st.columns([2, 1], gap="small")
+        with btn_col1:
+            if st.button("Scarica", key="open_download_dialog", use_container_width=True):
+                show_download_dialog()
+        with btn_col2:
+            if st.button("?", key="open_help_dialog", use_container_width=True):
+                show_info_dialog()
 
     # SECTION 1: Header with player info and usage score
     render_header_section(player_id, team_id, df_player, df_all)
