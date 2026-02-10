@@ -1282,6 +1282,93 @@ def load_sofascore_player_ratings() -> pd.DataFrame:
     return df
 
 
+@st.cache_data(ttl=3600, show_spinner="Caricamento eventi giocatore...")
+def load_player_events_for_player(player_id: int) -> pd.DataFrame:
+    """
+    Load player events for a specific player (passes, carries, duels).
+
+    Filters server-side for efficiency - only loads events for the specified player.
+
+    Args:
+        player_id: StatsBomb player ID
+
+    Returns:
+        DataFrame with columns: player_id, match_id, team_id, event_type,
+        start_x, start_y, end_x, end_y, outcome, subtype
+    """
+    # Try Supabase first if configured
+    if DATA_SOURCE == "supabase":
+        try:
+            client = _get_supabase_client()
+            # Filter server-side for this player only
+            response = client.table('player_events').select('*').eq('player_id', player_id).execute()
+            if response.data:
+                return pd.DataFrame(response.data)
+            return pd.DataFrame()
+        except Exception as e:
+            import logging
+            logging.warning(f"Failed to load player_events from Supabase: {e}")
+
+    # Fallback to CSV (local development)
+    data_dir = get_data_dir()
+    events_path = data_dir / 'player_events.csv'
+    if not events_path.exists():
+        return pd.DataFrame()
+
+    df = pd.read_csv(events_path)
+    return df[df['player_id'] == player_id]
+
+
+def load_player_events() -> pd.DataFrame:
+    """
+    Load ALL player events - USE WITH CAUTION, very slow!
+    Prefer load_player_events_for_player() for single player queries.
+    """
+    # Fallback to CSV only for local development
+    data_dir = get_data_dir()
+    events_path = data_dir / 'player_events.csv'
+    if not events_path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(events_path)
+
+
+@st.cache_data(ttl=3600, show_spinner="Caricamento partite...")
+def load_matches_for_events() -> pd.DataFrame:
+    """
+    Load match metadata for filtering player events by date/round.
+
+    Returns:
+        DataFrame with columns: match_id, match_date, match_week
+    """
+    # Try Supabase first if configured
+    if DATA_SOURCE == "supabase":
+        try:
+            client = _get_supabase_client()
+            all_data = _fetch_all_rows(client, 'matches', 'match_id, match_date, match_week')
+            if all_data:
+                df = pd.DataFrame(all_data)
+                if 'match_date' in df.columns:
+                    df['match_date'] = pd.to_datetime(df['match_date'], errors='coerce')
+                return df
+        except Exception as e:
+            import logging
+            logging.warning(f"Failed to load matches from Supabase: {e}")
+
+    # Fallback to CSV (local development)
+    data_dir = get_data_dir().parent
+    matches_path = data_dir / 'raw' / 'matches' / 'all_matches.csv'
+    if not matches_path.exists():
+        return pd.DataFrame()
+
+    df = pd.read_csv(matches_path)
+    if 'match_date' in df.columns:
+        df['match_date'] = pd.to_datetime(df['match_date'], errors='coerce')
+    cols = ['match_id', 'match_date']
+    if 'match_week' in df.columns:
+        cols.append('match_week')
+    return df[cols] if 'match_id' in df.columns else pd.DataFrame()
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def _get_local_player_image_path(player_id_int: int) -> Path:
     for local_dir in _get_player_images_dirs():
