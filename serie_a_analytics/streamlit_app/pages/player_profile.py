@@ -1555,7 +1555,8 @@ def main():
             2. Apri il file HTML nel browser (doppio click)
             3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
             4. Seleziona **"Salva come PDF"**
-            5. Imposta **orientamento orizzontale**
+            5. Imposta **Margini: Nessuno**
+            6. Imposta **orientamento orizzontale**
             """)
             st.download_button(
                 label="Scarica HTML",
@@ -1575,7 +1576,8 @@ def main():
             2. Apri il file HTML nel browser (doppio click)
             3. Stampa: `⌘+P` (Mac) o `Ctrl+P` (Windows)
             4. Seleziona **"Salva come PDF"**
-            5. Imposta **orientamento orizzontale**
+            5. Imposta **Margini: Nessuno**
+            6. Imposta **orientamento orizzontale**
             """)
 
         btn_col1, btn_col2 = st.columns([2, 1], gap="small")
