@@ -2112,7 +2112,7 @@ def get_player_basic_info(sofascore_player_id: int, sofascore_team_id: int) -> d
     Returns dict with:
         - player_name: str
         - team_name: str
-        - position: str
+        - position: str (mode of all positions played)
         - shirt_number: int
     """
     df = get_player_data_for_team(sofascore_player_id, sofascore_team_id)
@@ -2120,10 +2120,21 @@ def get_player_basic_info(sofascore_player_id: int, sofascore_team_id: int) -> d
         return None
 
     row = df.iloc[0]
+
+    # Calculate position as MODE (most frequent position played)
+    # This handles players who occasionally play different positions
+    position = ''
+    if 'position' in df.columns:
+        position_mode = df['position'].mode()
+        if len(position_mode) > 0:
+            position = position_mode.iloc[0]
+        elif pd.notna(row.get('position')):
+            position = row.get('position', '')
+
     return {
         'player_name': row.get('player_name', 'Giocatore'),
         'team_name': row.get('team_name', 'Squadra'),
-        'position': row.get('position', ''),
+        'position': position,
         'shirt_number': int(row.get('shirt_number', 0) or 0)
     }
 
