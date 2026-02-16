@@ -263,6 +263,7 @@ def _render_metric_distribution_sparkline(
     ))
 
     if selected_value is not None:
+        st.caption(f"DEBUG: Adding green point at x={selected_value}, color={color}")
         fig.add_trace(go.Scatter(
             x=[selected_value],
             y=[0],
