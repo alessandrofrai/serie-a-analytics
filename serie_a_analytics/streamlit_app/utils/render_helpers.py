@@ -291,6 +291,9 @@ def _render_metric_distribution_sparkline(
     else:
         x_range = [vmin - pad, vmax + pad]
 
+    # DEBUG: Show calculated range
+    st.caption(f"DEBUG: x_range={x_range}, lower_is_better={lower_is_better}")
+
     fig.update_layout(
         height=height,
         margin=dict(l=4, r=4, t=2, b=2),
