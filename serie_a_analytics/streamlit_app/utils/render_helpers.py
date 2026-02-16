@@ -214,8 +214,10 @@ def _render_metric_distribution_sparkline(
     # CRITICAL FIX: Ensure selected_value is ALWAYS in the values list
     # This guarantees the violin chart extends to cover selected_value
     # and the scatter plot includes it, making the highlighted point always visible
+    # NOTE: Always append without checking 'not in' - float comparison is unreliable
+    # and duplicates don't affect the visualization negatively
     values = list(values)  # Create a copy to avoid modifying original
-    if selected_value is not None and selected_value not in values:
+    if selected_value is not None:
         values.append(selected_value)
 
     # Deterministic jitter based on metric key (tight vertical spread)
