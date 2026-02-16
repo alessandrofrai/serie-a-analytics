@@ -220,7 +220,8 @@ def _render_metric_distribution_sparkline(
 
     # DEBUG: Log values range and selected_value
     import streamlit as st
-    st.caption(f"DEBUG: values range [{min(values):.2f}, {max(values):.2f}], selected={selected_value:.2f if selected_value else 'None'}")
+    sel_str = f"{selected_value:.2f}" if selected_value is not None else "None"
+    st.caption(f"DEBUG: values range [{min(values):.2f}, {max(values):.2f}], selected={sel_str}")
 
     if selected_value is not None:
         values.append(selected_value)
