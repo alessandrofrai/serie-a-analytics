@@ -217,12 +217,6 @@ def _render_metric_distribution_sparkline(
     # NOTE: Always append without checking 'not in' - float comparison is unreliable
     # and duplicates don't affect the visualization negatively
     values = list(values)  # Create a copy to avoid modifying original
-
-    # DEBUG: Log values range and selected_value
-    import streamlit as st
-    sel_str = f"{selected_value:.2f}" if selected_value is not None else "None"
-    st.caption(f"DEBUG: values range [{min(values):.2f}, {max(values):.2f}], selected={sel_str}")
-
     if selected_value is not None:
         values.append(selected_value)
 
@@ -263,7 +257,6 @@ def _render_metric_distribution_sparkline(
     ))
 
     if selected_value is not None:
-        st.caption(f"DEBUG: Adding green point at x={selected_value}, color={color}")
         fig.add_trace(go.Scatter(
             x=[selected_value],
             y=[0],
@@ -292,9 +285,6 @@ def _render_metric_distribution_sparkline(
     else:
         x_range = [vmin - pad, vmax + pad]
 
-    # DEBUG: Show calculated range
-    st.caption(f"DEBUG: x_range={x_range}, lower_is_better={lower_is_better}")
-
     fig.update_layout(
         height=height,
         margin=dict(l=4, r=4, t=2, b=2),
@@ -316,8 +306,7 @@ def _render_metric_distribution_sparkline(
         plot_bgcolor="rgba(0,0,0,0)",
     )
 
-    # DEBUG: Try without use_container_width to see if it fixes online rendering
-    st.plotly_chart(fig, use_container_width=False, config={'displayModeBar': False})
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
 def render_filtered_metrics(team_metrics, total_combinations, filter_type="strength", all_team_metrics=None):
