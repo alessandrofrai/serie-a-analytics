@@ -316,7 +316,8 @@ def _render_metric_distribution_sparkline(
         plot_bgcolor="rgba(0,0,0,0)",
     )
 
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    # DEBUG: Try without use_container_width to see if it fixes online rendering
+    st.plotly_chart(fig, use_container_width=False, config={'displayModeBar': False})
 
 
 def render_filtered_metrics(team_metrics, total_combinations, filter_type="strength", all_team_metrics=None):
