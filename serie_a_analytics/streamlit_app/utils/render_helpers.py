@@ -217,6 +217,11 @@ def _render_metric_distribution_sparkline(
     # NOTE: Always append without checking 'not in' - float comparison is unreliable
     # and duplicates don't affect the visualization negatively
     values = list(values)  # Create a copy to avoid modifying original
+
+    # DEBUG: Log values range and selected_value
+    import streamlit as st
+    st.caption(f"DEBUG: values range [{min(values):.2f}, {max(values):.2f}], selected={selected_value:.2f if selected_value else 'None'}")
+
     if selected_value is not None:
         values.append(selected_value)
 
